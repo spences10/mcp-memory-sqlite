@@ -55,7 +55,7 @@ export class DatabaseManager {
 		// Validate vector dimensions
 		if (numbers.length !== VECTOR_DIMENSIONS) {
 			throw new Error(
-				`Vector must have exactly ${VECTOR_DIMENSIONS} dimensions, got ${numbers.length}. Please provide a ${VECTOR_DIMENSIONS}-dimension vector or omit for null.`,
+				`Vector dimension mismatch: expected ${VECTOR_DIMENSIONS} dimensions (compatible with OpenAI ada-002/ada-003-small), but received ${numbers.length}. Please use ${VECTOR_DIMENSIONS}-dimensional embeddings or omit the embedding parameter to skip vector search for this entity.`,
 			);
 		}
 
