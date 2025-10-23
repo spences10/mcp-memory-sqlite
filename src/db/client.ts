@@ -342,16 +342,22 @@ export class DatabaseManager {
 	}
 
 	async search_entities(query: string): Promise<Entity[]> {
+		// Normalize query for flexible matching: replace spaces/underscores with wildcards
+		const normalized_query = query.replace(/[\s_-]+/g, '%');
+		const search_pattern = `%${normalized_query}%`;
+
 		const results = this.db
 			.prepare(
 				`
         SELECT DISTINCT e.name, e.entity_type
         FROM entities e
         LEFT JOIN observations o ON e.name = o.entity_name
-        WHERE e.name LIKE ? OR e.entity_type LIKE ? OR o.content LIKE ?
+        WHERE e.name LIKE ? COLLATE NOCASE
+           OR e.entity_type LIKE ? COLLATE NOCASE
+           OR o.content LIKE ? COLLATE NOCASE
       `,
 			)
-			.all(`%${query}%`, `%${query}%`, `%${query}%`) as Array<{
+			.all(search_pattern, search_pattern, search_pattern) as Array<{
 			name: string;
 			entity_type: string;
 		}>;

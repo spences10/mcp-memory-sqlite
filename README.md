@@ -13,7 +13,9 @@ with vector search capabilities.
   with observations
 - **Relationship Tracking**: Define and query relationships between
   entities with automatic duplicate prevention
-- **Text Search**: Full-text search across entities and observations
+- **Flexible Text Search**: Case-insensitive search across entities
+  and observations with automatic handling of spaces, underscores, and
+  hyphens
 - **Local & Private**: All data stored locally in a SQLite database
   file
 - **Data Integrity**: UNIQUE constraints prevent duplicate relations
@@ -84,6 +86,17 @@ similarity.
 	"query": "AI Assistant"
 }
 ```
+
+**Text Search Features:**
+
+- **Case-insensitive**: Searches ignore case differences
+- **Flexible matching**: Automatically handles variations in spacing,
+  underscores, and hyphens
+  - "JavaScript framework" will match "javascript_framework"
+  - "web-development" will match "web_development" or "web
+    development"
+- **Searches across**: Entity names, entity types, and all
+  observations
 
 **Vector Search Example:**
 
