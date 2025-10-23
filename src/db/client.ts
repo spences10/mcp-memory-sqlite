@@ -571,9 +571,8 @@ export class DatabaseManager {
 		relations: Relation[];
 	}> {
 		const recent_entities = await this.get_recent_entities();
-		const relations = await this.get_relations_for_entities(
-			recent_entities,
-		);
+		const relations =
+			await this.get_relations_for_entities(recent_entities);
 		return { entities: recent_entities, relations };
 	}
 
@@ -608,9 +607,8 @@ export class DatabaseManager {
 				return { entities: [], relations: [] };
 			}
 
-			const relations = await this.get_relations_for_entities(
-				entities,
-			);
+			const relations =
+				await this.get_relations_for_entities(entities);
 			return { entities, relations };
 		} catch (error) {
 			throw new Error(

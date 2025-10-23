@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { McpServer } from 'tmcp';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import { StdioTransport } from '@tmcp/transport-stdio';
-import * as v from 'valibot';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
+import { McpServer } from 'tmcp';
 import { fileURLToPath } from 'url';
+import * as v from 'valibot';
 import { DatabaseManager } from './db/client.js';
 import { get_database_config } from './db/config.js';
 import { Relation } from './types/index.js';
@@ -60,7 +60,8 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 	server.tool<typeof CreateEntitiesSchema>(
 		{
 			name: 'create_entities',
-			description: 'Create new entities with observations and optional embeddings',
+			description:
+				'Create new entities with observations and optional embeddings',
 			schema: CreateEntitiesSchema,
 		},
 		async ({ entities }) => {
@@ -82,7 +83,10 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 							text: JSON.stringify(
 								{
 									error: 'internal_error',
-									message: error instanceof Error ? error.message : 'Unknown error',
+									message:
+										error instanceof Error
+											? error.message
+											: 'Unknown error',
 								},
 								null,
 								2,
@@ -99,7 +103,8 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 	server.tool<typeof SearchNodesSchema>(
 		{
 			name: 'search_nodes',
-			description: 'Search for entities and their relations using text or vector similarity',
+			description:
+				'Search for entities and their relations using text or vector similarity',
 			schema: SearchNodesSchema,
 		},
 		async ({ query }) => {
@@ -121,7 +126,10 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 							text: JSON.stringify(
 								{
 									error: 'internal_error',
-									message: error instanceof Error ? error.message : 'Unknown error',
+									message:
+										error instanceof Error
+											? error.message
+											: 'Unknown error',
 								},
 								null,
 								2,
@@ -159,7 +167,10 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 							text: JSON.stringify(
 								{
 									error: 'internal_error',
-									message: error instanceof Error ? error.message : 'Unknown error',
+									message:
+										error instanceof Error
+											? error.message
+											: 'Unknown error',
 								},
 								null,
 								2,
@@ -204,7 +215,10 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 							text: JSON.stringify(
 								{
 									error: 'internal_error',
-									message: error instanceof Error ? error.message : 'Unknown error',
+									message:
+										error instanceof Error
+											? error.message
+											: 'Unknown error',
 								},
 								null,
 								2,
@@ -221,7 +235,8 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 	server.tool<typeof DeleteEntitySchema>(
 		{
 			name: 'delete_entity',
-			description: 'Delete an entity and all its associated data (observations and relations)',
+			description:
+				'Delete an entity and all its associated data (observations and relations)',
 			schema: DeleteEntitySchema,
 		},
 		async ({ name }) => {
@@ -243,7 +258,10 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 							text: JSON.stringify(
 								{
 									error: 'internal_error',
-									message: error instanceof Error ? error.message : 'Unknown error',
+									message:
+										error instanceof Error
+											? error.message
+											: 'Unknown error',
 								},
 								null,
 								2,
@@ -282,7 +300,10 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 							text: JSON.stringify(
 								{
 									error: 'internal_error',
-									message: error instanceof Error ? error.message : 'Unknown error',
+									message:
+										error instanceof Error
+											? error.message
+											: 'Unknown error',
 								},
 								null,
 								2,
@@ -308,7 +329,8 @@ async function main() {
 		{
 			name,
 			version,
-			description: 'SQLite-based persistent memory tool for MCP with vector search',
+			description:
+				'SQLite-based persistent memory tool for MCP with vector search',
 		},
 		{
 			adapter,

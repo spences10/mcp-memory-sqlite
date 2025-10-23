@@ -1,26 +1,59 @@
 # mcp-memory-sqlite
 
-SQLite-based persistent memory tool for MCP (Model Context Protocol)
-with vector search capabilities.
+A personal knowledge graph and memory system for AI assistants using
+SQLite and vector search. Perfect for giving Claude (or any
+MCP-compatible AI) persistent memory across conversations!
+
+## Why Use This?
+
+Give your AI assistant a memory! This tool lets Claude (or other AI
+assistants) remember entities, concepts, and their relationships
+across conversations. Perfect for:
+
+- 📚 **Personal Knowledge Management** - Build your own knowledge
+  graph
+- 🤖 **AI Assistant Memory** - Help Claude remember important
+  information about your projects, preferences, and context
+- 🔗 **Relationship Tracking** - Connect ideas, people, projects, and
+  concepts
+- 🔍 **Smart Search** - Find information using text search or semantic
+  similarity
 
 ## Features
 
-- **Persistent Knowledge Graph**: Store entities, observations, and
-  relationships in a local SQLite database
-- **Vector Search**: Semantic similarity search using sqlite-vec with
-  1536-dimensional embeddings (OpenAI ada-002 compatible)
-- **Entity Management**: Create, retrieve, update, and delete entities
-  with observations
-- **Relationship Tracking**: Define and query relationships between
-  entities with automatic duplicate prevention
-- **Flexible Text Search**: Case-insensitive search across entities
-  and observations with automatic handling of spaces, underscores, and
-  hyphens
-- **Local & Private**: All data stored locally in a SQLite database
-  file
-- **Data Integrity**: UNIQUE constraints prevent duplicate relations
+- **100% Local & Private**: All your data stays on your machine
+- **Easy Setup**: Works out-of-the-box with Claude Desktop
+- **Flexible Search**: Case-insensitive text search that handles
+  different naming conventions
+- **Vector Search**: Semantic similarity using OpenAI-compatible
+  embeddings (1536 dimensions)
+- **Smart Deduplication**: Automatically prevents duplicate
+  relationships
+- **Simple API**: Intuitive tools for creating, searching, and
+  managing your knowledge graph
+
+## Quick Start
+
+**For Claude Desktop users** (recommended):
+
+Add this to your Claude Desktop config:
+
+```json
+{
+	"mcpServers": {
+		"memory": {
+			"command": "npx",
+			"args": ["-y", "mcp-memory-sqlite"]
+		}
+	}
+}
+```
+
+That's it! Claude can now remember things across conversations.
 
 ## Installation
+
+If you want to use it in your own project:
 
 ```bash
 npm install mcp-memory-sqlite
@@ -30,11 +63,11 @@ pnpm add mcp-memory-sqlite
 
 ## Configuration
 
-The server can be configured using environment variables:
+**Optional**: Customize the database location with an environment
+variable:
 
-- `SQLITE_DB_PATH`: Path to the SQLite database file (default:
-  `./sqlite-memory.db` in the working directory where the server
-  starts)
+- `SQLITE_DB_PATH`: Where to store your data (default:
+  `./sqlite-memory.db`)
 
 ## MCP Tools
 
@@ -240,15 +273,16 @@ pnpm run dev
 pnpm test
 ```
 
-## Technical Details
+## How It Works
 
-- Built with better-sqlite3 for fast, synchronous SQLite access
-- Uses sqlite-vec for efficient vector similarity search
-- Implements WAL mode for better concurrency
-- Foreign key constraints for data integrity
-- UNIQUE constraints to prevent duplicate relations
-- Transaction support for atomic operations
-- INSERT OR IGNORE pattern for idempotent relation creation
+Under the hood, this uses:
+
+- **SQLite** for fast, reliable local storage
+- **sqlite-vec** for vector similarity search
+- **better-sqlite3** for Node.js integration
+
+Your data is stored in a single `.db` file on your computer - no
+cloud, no external services, completely private.
 
 ## License
 
