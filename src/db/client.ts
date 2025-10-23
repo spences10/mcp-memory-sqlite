@@ -44,7 +44,9 @@ export class DatabaseManager {
 	}
 
 	// Convert Float32Array to Buffer for sqlite-vec
-	private vector_to_buffer(numbers: number[] | undefined): Buffer | null {
+	private vector_to_buffer(
+		numbers: number[] | undefined,
+	): Buffer | null {
 		// If no embedding provided, return null
 		if (!numbers || !Array.isArray(numbers)) {
 			return null;
@@ -74,7 +76,9 @@ export class DatabaseManager {
 	}
 
 	// Convert Buffer back to number array
-	private buffer_to_vector(buffer: Buffer | null): number[] | undefined {
+	private buffer_to_vector(
+		buffer: Buffer | null,
+	): number[] | undefined {
 		if (!buffer) {
 			return undefined;
 		}
@@ -145,7 +149,9 @@ export class DatabaseManager {
 				if (existing) {
 					// Update existing entity
 					this.db
-						.prepare('UPDATE entities SET entity_type = ? WHERE name = ?')
+						.prepare(
+							'UPDATE entities SET entity_type = ? WHERE name = ?',
+						)
 						.run(entity.entityType, entity.name);
 				} else {
 					// Insert new entity
@@ -158,11 +164,15 @@ export class DatabaseManager {
 
 				// Handle vector embedding
 				if (entity.embedding) {
-					const vector_buffer = this.vector_to_buffer(entity.embedding);
+					const vector_buffer = this.vector_to_buffer(
+						entity.embedding,
+					);
 					if (vector_buffer) {
 						// Check if vector exists
 						const existing_vec = this.db
-							.prepare('SELECT rowid FROM entities_vec WHERE rowid = (SELECT rowid FROM entities WHERE name = ?)')
+							.prepare(
+								'SELECT rowid FROM entities_vec WHERE rowid = (SELECT rowid FROM entities WHERE name = ?)',
+							)
 							.get(entity.name);
 
 						if (existing_vec) {
@@ -175,7 +185,9 @@ export class DatabaseManager {
 						} else {
 							// Insert new vector
 							this.db
-								.prepare('INSERT INTO entities_vec (embedding) VALUES (?)')
+								.prepare(
+									'INSERT INTO entities_vec (embedding) VALUES (?)',
+								)
 								.run(vector_buffer);
 						}
 					}
@@ -256,7 +268,9 @@ export class DatabaseManager {
 						)
 						.all(row.name) as Array<{ content: string }>;
 
-					const entity_embedding = this.buffer_to_vector(row.embedding);
+					const entity_embedding = this.buffer_to_vector(
+						row.embedding,
+					);
 
 					search_results.push({
 						entity: {
@@ -269,7 +283,9 @@ export class DatabaseManager {
 					});
 				} catch (error) {
 					console.warn(
-						`Failed to process search result for entity "${row.name}": ${
+						`Failed to process search result for entity "${
+							row.name
+						}": ${
 							error instanceof Error ? error.message : String(error)
 						}`,
 					);
@@ -290,7 +306,9 @@ export class DatabaseManager {
 
 	async get_entity(name: string): Promise<Entity> {
 		const entity_result = this.db
-			.prepare('SELECT name, entity_type FROM entities WHERE name = ?')
+			.prepare(
+				'SELECT name, entity_type FROM entities WHERE name = ?',
+			)
 			.get(name) as { name: string; entity_type: string } | undefined;
 
 		if (!entity_result) {
@@ -298,7 +316,9 @@ export class DatabaseManager {
 		}
 
 		const observations_result = this.db
-			.prepare('SELECT content FROM observations WHERE entity_name = ?')
+			.prepare(
+				'SELECT content FROM observations WHERE entity_name = ?',
+			)
 			.all(name) as Array<{ content: string }>;
 
 		// Try to get embedding from vec table
@@ -340,7 +360,9 @@ export class DatabaseManager {
 		for (const row of results) {
 			const name = row.name;
 			const observations = this.db
-				.prepare('SELECT content FROM observations WHERE entity_name = ?')
+				.prepare(
+					'SELECT content FROM observations WHERE entity_name = ?',
+				)
 				.all(name) as Array<{ content: string }>;
 
 			// Try to get embedding
@@ -377,7 +399,9 @@ export class DatabaseManager {
 		for (const row of results) {
 			const name = row.name;
 			const observations = this.db
-				.prepare('SELECT content FROM observations WHERE entity_name = ?')
+				.prepare(
+					'SELECT content FROM observations WHERE entity_name = ?',
+				)
 				.all(name) as Array<{ content: string }>;
 
 			// Try to get embedding
@@ -409,11 +433,16 @@ export class DatabaseManager {
 			if (relations.length === 0) return;
 
 			const transaction = this.db.transaction(() => {
+				// Use INSERT OR IGNORE to silently skip duplicate relations
 				const insert = this.db.prepare(
-					'INSERT INTO relations (source, target, relation_type) VALUES (?, ?, ?)',
+					'INSERT OR IGNORE INTO relations (source, target, relation_type) VALUES (?, ?, ?)',
 				);
 				for (const relation of relations) {
-					insert.run(relation.from, relation.to, relation.relationType);
+					insert.run(
+						relation.from,
+						relation.to,
+						relation.relationType,
+					);
 				}
 			});
 
@@ -446,7 +475,9 @@ export class DatabaseManager {
 
 				// Delete associated relations (due to foreign key)
 				this.db
-					.prepare('DELETE FROM relations WHERE source = ? OR target = ?')
+					.prepare(
+						'DELETE FROM relations WHERE source = ? OR target = ?',
+					)
 					.run(name, name);
 
 				// Delete from vector table
@@ -457,7 +488,9 @@ export class DatabaseManager {
 					.run(name);
 
 				// Delete the entity
-				this.db.prepare('DELETE FROM entities WHERE name = ?').run(name);
+				this.db
+					.prepare('DELETE FROM entities WHERE name = ?')
+					.run(name);
 			});
 
 			transaction();
@@ -616,7 +649,8 @@ export class DatabaseManager {
 					relation_type TEXT NOT NULL,
 					created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 					FOREIGN KEY (source) REFERENCES entities(name),
-					FOREIGN KEY (target) REFERENCES entities(name)
+					FOREIGN KEY (target) REFERENCES entities(name),
+					UNIQUE(source, target, relation_type)
 				);
 			`);
 

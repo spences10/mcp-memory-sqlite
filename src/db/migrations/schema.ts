@@ -26,7 +26,8 @@ export const schema = [
     relation_type TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (source) REFERENCES entities(name),
-    FOREIGN KEY (target) REFERENCES entities(name)
+    FOREIGN KEY (target) REFERENCES entities(name),
+    UNIQUE(source, target, relation_type)
   )`,
 
 	// Create virtual table for vector embeddings using sqlite-vec

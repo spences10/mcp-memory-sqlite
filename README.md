@@ -1,15 +1,22 @@
 # mcp-memory-sqlite
 
-SQLite-based persistent memory tool for MCP (Model Context Protocol) with vector search capabilities.
+SQLite-based persistent memory tool for MCP (Model Context Protocol)
+with vector search capabilities.
 
 ## Features
 
-- **Persistent Knowledge Graph**: Store entities, observations, and relationships in a local SQLite database
-- **Vector Search**: Semantic similarity search using sqlite-vec with 1536-dimensional embeddings (OpenAI ada-002 compatible)
-- **Entity Management**: Create, retrieve, update, and delete entities with observations
-- **Relationship Tracking**: Define and query relationships between entities
+- **Persistent Knowledge Graph**: Store entities, observations, and
+  relationships in a local SQLite database
+- **Vector Search**: Semantic similarity search using sqlite-vec with
+  1536-dimensional embeddings (OpenAI ada-002 compatible)
+- **Entity Management**: Create, retrieve, update, and delete entities
+  with observations
+- **Relationship Tracking**: Define and query relationships between
+  entities with automatic duplicate prevention
 - **Text Search**: Full-text search across entities and observations
-- **Local & Private**: All data stored locally in a SQLite database file
+- **Local & Private**: All data stored locally in a SQLite database
+  file
+- **Data Integrity**: UNIQUE constraints prevent duplicate relations
 
 ## Installation
 
@@ -23,7 +30,9 @@ pnpm add mcp-memory-sqlite
 
 The server can be configured using environment variables:
 
-- `SQLITE_DB_PATH`: Path to the SQLite database file (default: `./sqlite-memory.db` in the working directory where the server starts)
+- `SQLITE_DB_PATH`: Path to the SQLite database file (default:
+  `./sqlite-memory.db` in the working directory where the server
+  starts)
 
 ## MCP Tools
 
@@ -32,13 +41,16 @@ The server can be configured using environment variables:
 Create or update entities with observations and optional embeddings.
 
 **Parameters:**
+
 - `entities`: Array of entity objects
   - `name` (string): Unique entity identifier
   - `entityType` (string): Type/category of the entity
   - `observations` (string[]): Array of observation strings
-  - `embedding` (number[], optional): 1536-dimensional vector for semantic search
+  - `embedding` (number[], optional): 1536-dimensional vector for
+    semantic search
 
 **Example:**
+
 ```json
 {
   "entities": [
@@ -57,19 +69,24 @@ Create or update entities with observations and optional embeddings.
 
 ### search_nodes
 
-Search for entities and their relations using text or vector similarity.
+Search for entities and their relations using text or vector
+similarity.
 
 **Parameters:**
-- `query`: String for text search OR array of numbers for vector similarity search
+
+- `query`: String for text search OR array of numbers for vector
+  similarity search
 
 **Text Search Example:**
+
 ```json
 {
-  "query": "AI Assistant"
+	"query": "AI Assistant"
 }
 ```
 
 **Vector Search Example:**
+
 ```json
 {
   "query": [0.1, 0.2, 0.3, ...] // 1536 dimensions
@@ -78,38 +95,47 @@ Search for entities and their relations using text or vector similarity.
 
 ### read_graph
 
-Get recent entities and their relations (returns last 10 entities by default).
+Get recent entities and their relations (returns last 10 entities by
+default).
 
 **Parameters:** None
 
 ### create_relations
 
-Create relationships between entities.
+Create relationships between entities. Duplicate relations (same
+source, target, and type) are automatically ignored.
 
 **Parameters:**
+
 - `relations`: Array of relation objects
   - `source` (string): Source entity name
   - `target` (string): Target entity name
   - `type` (string): Relationship type
 
 **Example:**
+
 ```json
 {
-  "relations": [
-    {
-      "source": "Claude",
-      "target": "Anthropic",
-      "type": "created_by"
-    }
-  ]
+	"relations": [
+		{
+			"source": "Claude",
+			"target": "Anthropic",
+			"type": "created_by"
+		}
+	]
 }
 ```
+
+**Note:** If you attempt to create the same relation multiple times,
+only the first one will be stored. This prevents duplicate
+relationships in your knowledge graph.
 
 ### delete_entity
 
 Delete an entity and all associated data (observations and relations).
 
 **Parameters:**
+
 - `name` (string): Entity name to delete
 
 ### delete_relation
@@ -117,6 +143,7 @@ Delete an entity and all associated data (observations and relations).
 Delete a specific relation between entities.
 
 **Parameters:**
+
 - `source` (string): Source entity name
 - `target` (string): Target entity name
 - `type` (string): Relationship type
@@ -126,35 +153,38 @@ Delete a specific relation between entities.
 Add to your Claude Desktop configuration:
 
 **Minimal configuration (uses default `./sqlite-memory.db`):**
+
 ```json
 {
-  "mcpServers": {
-    "memory": {
-      "command": "npx",
-      "args": ["-y", "mcp-memory-sqlite"]
-    }
-  }
+	"mcpServers": {
+		"memory": {
+			"command": "npx",
+			"args": ["-y", "mcp-memory-sqlite"]
+		}
+	}
 }
 ```
 
 **With custom database path:**
+
 ```json
 {
-  "mcpServers": {
-    "memory": {
-      "command": "npx",
-      "args": ["-y", "mcp-memory-sqlite"],
-      "env": {
-        "SQLITE_DB_PATH": "/path/to/your/memory.db"
-      }
-    }
-  }
+	"mcpServers": {
+		"memory": {
+			"command": "npx",
+			"args": ["-y", "mcp-memory-sqlite"],
+			"env": {
+				"SQLITE_DB_PATH": "/path/to/your/memory.db"
+			}
+		}
+	}
 }
 ```
 
 ## Database Schema
 
-The tool uses SQLite with the sqlite-vec extension for vector operations:
+The tool uses SQLite with the sqlite-vec extension for vector
+operations:
 
 ### Regular Tables
 
@@ -164,16 +194,19 @@ The tool uses SQLite with the sqlite-vec extension for vector operations:
 
 ### Virtual Table
 
-- **entities_vec**: Virtual table using vec0 for 1536-dimensional vector embeddings
+- **entities_vec**: Virtual table using vec0 for 1536-dimensional
+  vector embeddings
 
 ## Vector Embeddings
 
 The tool expects 1536-dimensional float vectors, compatible with:
+
 - OpenAI text-embedding-ada-002
 - OpenAI text-embedding-3-small
 - Other models producing 1536-dimensional embeddings
 
 To generate embeddings, you can use:
+
 - OpenAI Embeddings API
 - Local embedding models like sentence-transformers
 - Other embedding services that produce 1536-dim vectors
@@ -200,7 +233,9 @@ pnpm test
 - Uses sqlite-vec for efficient vector similarity search
 - Implements WAL mode for better concurrency
 - Foreign key constraints for data integrity
+- UNIQUE constraints to prevent duplicate relations
 - Transaction support for atomic operations
+- INSERT OR IGNORE pattern for idempotent relation creation
 
 ## License
 
@@ -209,6 +244,9 @@ MIT
 ## Credits
 
 Built with:
-- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - Fast SQLite driver
-- [sqlite-vec](https://github.com/asg017/sqlite-vec) - Vector search extension
+
+- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - Fast
+  SQLite driver
+- [sqlite-vec](https://github.com/asg017/sqlite-vec) - Vector search
+  extension
 - [tmcp](https://github.com/tmcp-io/tmcp) - MCP server framework
