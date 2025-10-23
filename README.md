@@ -23,7 +23,7 @@ pnpm add mcp-memory-sqlite
 
 The server can be configured using environment variables:
 
-- `SQLITE_DB_PATH`: Path to the SQLite database file (default: `./sqlite-memory.db`)
+- `SQLITE_DB_PATH`: Path to the SQLite database file (default: `./sqlite-memory.db` in the working directory where the server starts)
 
 ## MCP Tools
 
@@ -125,6 +125,19 @@ Delete a specific relation between entities.
 
 Add to your Claude Desktop configuration:
 
+**Minimal configuration (uses default `./sqlite-memory.db`):**
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "mcp-memory-sqlite"]
+    }
+  }
+}
+```
+
+**With custom database path:**
 ```json
 {
   "mcpServers": {

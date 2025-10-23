@@ -27,7 +27,7 @@ coverage/
 
 # Database files
 *.db
-*.db-journal
+*.db-*
 
 # OS
 .DS_Store
