@@ -61,7 +61,7 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 		{
 			name: 'create_entities',
 			description:
-				'Create new entities with observations and optional embeddings',
+				'Create or update entities with observations and embeddings',
 			schema: CreateEntitiesSchema,
 		},
 		async ({ entities }) => {
@@ -104,7 +104,7 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 		{
 			name: 'search_nodes',
 			description:
-				'Search for entities and their relations using text or vector similarity',
+				'Search entities and relations by text or vector similarity',
 			schema: SearchNodesSchema,
 		},
 		async ({ query }) => {
@@ -235,8 +235,7 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 	server.tool<typeof DeleteEntitySchema>(
 		{
 			name: 'delete_entity',
-			description:
-				'Delete an entity and all its associated data (observations and relations)',
+			description: 'Delete entity and associated data',
 			schema: DeleteEntitySchema,
 		},
 		async ({ name }) => {
@@ -278,7 +277,7 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 	server.tool<typeof DeleteRelationSchema>(
 		{
 			name: 'delete_relation',
-			description: 'Delete a specific relation between entities',
+			description: 'Delete relation between entities',
 			schema: DeleteRelationSchema,
 		},
 		async ({ source, target, type }) => {
