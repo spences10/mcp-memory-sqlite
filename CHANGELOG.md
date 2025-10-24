@@ -1,5 +1,11 @@
 # mcp-memory-sqlite
 
+## 0.0.3
+
+### Patch Changes
+
+- 1077dc3: optimise descriptions
+
 ## 0.0.2
 
 ### Patch Changes
