@@ -1,6 +1,6 @@
 {
 	"name": "mcp-memory-sqlite",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"description": "SQLite-based persistent memory tool for MCP with text search",
 	"license": "MIT",
 	"type": "module",

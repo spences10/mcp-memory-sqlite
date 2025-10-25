@@ -1,5 +1,11 @@
 # mcp-memory-sqlite
 
+## 0.0.4
+
+### Patch Changes
+
+- drop vector search improve text search with relevance ranking
+
 ## 0.0.3
 
 ### Patch Changes
