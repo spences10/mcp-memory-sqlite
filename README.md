@@ -1,7 +1,7 @@
 # mcp-memory-sqlite
 
 A personal knowledge graph and memory system for AI assistants using
-SQLite and vector search. Perfect for giving Claude (or any
+SQLite with optimized text search. Perfect for giving Claude (or any
 MCP-compatible AI) persistent memory across conversations!
 
 ## Why Use This?
@@ -16,19 +16,21 @@ across conversations. Perfect for:
   information about your projects, preferences, and context
 - 🔗 **Relationship Tracking** - Connect ideas, people, projects, and
   concepts
-- 🔍 **Smart Search** - Find information using text search or semantic
-  similarity
+- 🔍 **Smart Text Search** - Find information using flexible,
+  relevance-ranked text search
 
 ## Features
 
 - **100% Local & Private**: All your data stays on your machine
 - **Easy Setup**: Works out-of-the-box with Claude Desktop
-- **Flexible Search**: Case-insensitive text search that handles
-  different naming conventions
-- **Vector Search**: Semantic similarity using OpenAI-compatible
-  embeddings (1536 dimensions)
+- **Flexible Text Search**: Case-insensitive search with fuzzy
+  matching that handles different naming conventions
+- **Relevance Ranking**: Results prioritized by name match > type
+  match > observation match
 - **Smart Deduplication**: Automatically prevents duplicate
   relationships
+- **Context-Optimized**: Designed specifically for LLM context
+  efficiency - no unnecessary data bloat
 - **Simple API**: Intuitive tools for creating, searching, and
   managing your knowledge graph
 
@@ -73,7 +75,7 @@ variable:
 
 ### create_entities
 
-Create or update entities with observations and optional embeddings.
+Create or update entities with observations.
 
 **Parameters:**
 
@@ -81,42 +83,41 @@ Create or update entities with observations and optional embeddings.
   - `name` (string): Unique entity identifier
   - `entityType` (string): Type/category of the entity
   - `observations` (string[]): Array of observation strings
-  - `embedding` (number[], optional): 1536-dimensional vector for
-    semantic search
 
 **Example:**
 
 ```json
 {
-  "entities": [
-    {
-      "name": "Claude",
-      "entityType": "AI Assistant",
-      "observations": [
-        "Created by Anthropic",
-        "Focuses on being helpful, harmless, and honest"
-      ],
-      "embedding": [0.1, 0.2, ...] // 1536 dimensions
-    }
-  ]
+	"entities": [
+		{
+			"name": "Claude",
+			"entityType": "AI Assistant",
+			"observations": [
+				"Created by Anthropic",
+				"Focuses on being helpful, harmless, and honest"
+			]
+		}
+	]
 }
 ```
 
 ### search_nodes
 
-Search for entities and their relations using text or vector
-similarity.
+Search for entities and their relations using text search with
+relevance ranking.
 
 **Parameters:**
 
-- `query`: String for text search OR array of numbers for vector
-  similarity search
+- `query` (string): Text to search for
+- `limit` (number, optional): Maximum results to return (default: 10,
+  max: 50)
 
-**Text Search Example:**
+**Example:**
 
 ```json
 {
-	"query": "AI Assistant"
+	"query": "AI Assistant",
+	"limit": 5
 }
 ```
 
@@ -130,14 +131,8 @@ similarity.
     development"
 - **Searches across**: Entity names, entity types, and all
   observations
-
-**Vector Search Example:**
-
-```json
-{
-  "query": [0.1, 0.2, 0.3, ...] // 1536 dimensions
-}
-```
+- **Relevance ranking**: Results prioritized by where match occurs
+  (name > type > observation)
 
 ### read_graph
 
@@ -194,6 +189,30 @@ Delete a specific relation between entities.
 - `target` (string): Target entity name
 - `type` (string): Relationship type
 
+### get_entity_with_relations
+
+Get an entity along with all its relations and directly connected
+entities. Perfect for exploring the knowledge graph around a specific
+concept.
+
+**Parameters:**
+
+- `name` (string): Entity name to retrieve
+
+**Returns:**
+
+- `entity`: The requested entity
+- `relations`: All relations where this entity is source or target
+- `relatedEntities`: All entities connected to this one
+
+**Example:**
+
+```json
+{
+	"name": "Claude"
+}
+```
+
 ## Usage with Claude Desktop
 
 Add to your Claude Desktop configuration:
@@ -229,33 +248,17 @@ Add to your Claude Desktop configuration:
 
 ## Database Schema
 
-The tool uses SQLite with the sqlite-vec extension for vector
-operations:
+The tool uses pure SQLite for fast, reliable storage:
 
-### Regular Tables
+### Tables
 
 - **entities**: Stores entity metadata (name, type, creation time)
 - **observations**: Stores observations linked to entities
-- **relations**: Stores relationships between entities
+- **relations**: Stores relationships between entities (with unique
+  constraint to prevent duplicates)
 
-### Virtual Table
-
-- **entities_vec**: Virtual table using vec0 for 1536-dimensional
-  vector embeddings
-
-## Vector Embeddings
-
-The tool expects 1536-dimensional float vectors, compatible with:
-
-- OpenAI text-embedding-ada-002
-- OpenAI text-embedding-3-small
-- Other models producing 1536-dimensional embeddings
-
-To generate embeddings, you can use:
-
-- OpenAI Embeddings API
-- Local embedding models like sentence-transformers
-- Other embedding services that produce 1536-dim vectors
+All queries use optimized SQLite indexes for fast text search and
+relationship traversal.
 
 ## Development
 
@@ -278,8 +281,8 @@ pnpm test
 Under the hood, this uses:
 
 - **SQLite** for fast, reliable local storage
-- **sqlite-vec** for vector similarity search
 - **better-sqlite3** for Node.js integration
+- **Optimized text search** with relevance ranking and fuzzy matching
 
 Your data is stored in a single `.db` file on your computer - no
 cloud, no external services, completely private.
@@ -294,6 +297,4 @@ Built with:
 
 - [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - Fast
   SQLite driver
-- [sqlite-vec](https://github.com/asg017/sqlite-vec) - Vector search
-  extension
 - [tmcp](https://github.com/tmcp-io/tmcp) - MCP server framework

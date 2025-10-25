@@ -1,7 +1,7 @@
 {
 	"name": "mcp-memory-sqlite",
 	"version": "0.0.3",
-	"description": "SQLite-based persistent memory tool for MCP with vector search",
+	"description": "SQLite-based persistent memory tool for MCP with text search",
 	"license": "MIT",
 	"type": "module",
 	"main": "dist/index.js",
@@ -25,13 +25,10 @@
 	"keywords": [
 		"mcp",
 		"memory",
-		"vector",
 		"sqlite",
-		"sqlite-vec",
 		"knowledge-graph",
 		"database",
-		"vector-search",
-		"semantic-search",
+		"text-search",
 		"knowledge-management"
 	],
 	"scripts": {
@@ -51,7 +48,6 @@
 		"@tmcp/transport-stdio": "^0.3.1",
 		"@types/node": "^24.9.1",
 		"better-sqlite3": "^12.4.1",
-		"sqlite-vec": "^0.1.6",
 		"tmcp": "^1.15.3",
 		"valibot": "^1.1.0"
 	},

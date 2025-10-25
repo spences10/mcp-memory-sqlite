@@ -1,14 +1,10 @@
 import Database from 'better-sqlite3';
-import * as sqliteVec from 'sqlite-vec';
 import { Entity, Relation, SearchResult } from '../types/index.js';
 
 // Types for configuration
 interface DatabaseConfig {
 	dbPath: string;
 }
-
-// Vector dimension constant (1536 for OpenAI ada-002 compatibility)
-const VECTOR_DIMENSIONS = 1536;
 
 export class DatabaseManager {
 	private static instance: DatabaseManager;
@@ -21,9 +17,6 @@ export class DatabaseManager {
 
 		// Open database connection
 		this.db = new Database(config.dbPath);
-
-		// Load sqlite-vec extension
-		sqliteVec.load(this.db);
 
 		// Configure database for better performance and safety
 		this.db.pragma('journal_mode = WAL');
@@ -43,60 +36,12 @@ export class DatabaseManager {
 		return DatabaseManager.instance;
 	}
 
-	// Convert Float32Array to Buffer for sqlite-vec
-	private vector_to_buffer(
-		numbers: number[] | undefined,
-	): Buffer | null {
-		// If no embedding provided, return null
-		if (!numbers || !Array.isArray(numbers)) {
-			return null;
-		}
-
-		// Validate vector dimensions
-		if (numbers.length !== VECTOR_DIMENSIONS) {
-			throw new Error(
-				`Vector dimension mismatch: expected ${VECTOR_DIMENSIONS} dimensions (compatible with OpenAI ada-002/ada-003-small), but received ${numbers.length}. Please use ${VECTOR_DIMENSIONS}-dimensional embeddings or omit the embedding parameter to skip vector search for this entity.`,
-			);
-		}
-
-		// Validate all elements are numbers and convert NaN/Infinity to 0
-		const sanitized_numbers = numbers.map((n) => {
-			if (typeof n !== 'number' || isNaN(n) || !isFinite(n)) {
-				console.warn(
-					`Invalid vector value detected, using 0.0 instead of: ${n}`,
-				);
-				return 0.0;
-			}
-			return n;
-		});
-
-		// Create Float32Array and return as Buffer
-		const float32Array = new Float32Array(sanitized_numbers);
-		return Buffer.from(float32Array.buffer);
-	}
-
-	// Convert Buffer back to number array
-	private buffer_to_vector(
-		buffer: Buffer | null,
-	): number[] | undefined {
-		if (!buffer) {
-			return undefined;
-		}
-		const float32Array = new Float32Array(
-			buffer.buffer,
-			buffer.byteOffset,
-			buffer.byteLength / Float32Array.BYTES_PER_ELEMENT,
-		);
-		return Array.from(float32Array);
-	}
-
 	// Entity operations
 	async create_entities(
 		entities: Array<{
 			name: string;
 			entityType: string;
 			observations: string[];
-			embedding?: number[];
 		}>,
 	): Promise<void> {
 		const transaction = this.db.transaction(() => {
@@ -162,37 +107,6 @@ export class DatabaseManager {
 						.run(entity.name, entity.entityType);
 				}
 
-				// Handle vector embedding
-				if (entity.embedding) {
-					const vector_buffer = this.vector_to_buffer(
-						entity.embedding,
-					);
-					if (vector_buffer) {
-						// Check if vector exists
-						const existing_vec = this.db
-							.prepare(
-								'SELECT rowid FROM entities_vec WHERE rowid = (SELECT rowid FROM entities WHERE name = ?)',
-							)
-							.get(entity.name);
-
-						if (existing_vec) {
-							// Update existing vector
-							this.db
-								.prepare(
-									'UPDATE entities_vec SET embedding = ? WHERE rowid = (SELECT rowid FROM entities WHERE name = ?)',
-								)
-								.run(vector_buffer, entity.name);
-						} else {
-							// Insert new vector
-							this.db
-								.prepare(
-									'INSERT INTO entities_vec (embedding) VALUES (?)',
-								)
-								.run(vector_buffer);
-						}
-					}
-				}
-
 				// Clear old observations
 				this.db
 					.prepare('DELETE FROM observations WHERE entity_name = ?')
@@ -220,90 +134,6 @@ export class DatabaseManager {
 		}
 	}
 
-	async search_similar(
-		embedding: number[],
-		limit: number = 5,
-	): Promise<SearchResult[]> {
-		try {
-			// Validate input vector
-			if (!Array.isArray(embedding)) {
-				throw new Error('Search embedding must be an array');
-			}
-
-			const vector_buffer = this.vector_to_buffer(embedding);
-			if (!vector_buffer) {
-				throw new Error('Invalid embedding vector');
-			}
-
-			// Use vec_distance_cosine for similarity search
-			const results = this.db
-				.prepare(
-					`
-					SELECT
-						e.name,
-						e.entity_type,
-						v.embedding,
-						vec_distance_cosine(v.embedding, ?) as distance
-					FROM entities e
-					INNER JOIN entities_vec v ON v.rowid = e.rowid
-					WHERE v.embedding IS NOT NULL
-					ORDER BY distance ASC
-					LIMIT ?
-				`,
-				)
-				.all(vector_buffer, limit) as Array<{
-				name: string;
-				entity_type: string;
-				embedding: Buffer;
-				distance: number;
-			}>;
-
-			// Get observations for each entity
-			const search_results: SearchResult[] = [];
-			for (const row of results) {
-				try {
-					const observations = this.db
-						.prepare(
-							'SELECT content FROM observations WHERE entity_name = ?',
-						)
-						.all(row.name) as Array<{ content: string }>;
-
-					const entity_embedding = this.buffer_to_vector(
-						row.embedding,
-					);
-
-					search_results.push({
-						entity: {
-							name: row.name,
-							entityType: row.entity_type,
-							observations: observations.map((obs) => obs.content),
-							embedding: entity_embedding,
-						},
-						distance: row.distance,
-					});
-				} catch (error) {
-					console.warn(
-						`Failed to process search result for entity "${
-							row.name
-						}": ${
-							error instanceof Error ? error.message : String(error)
-						}`,
-					);
-					// Continue processing other results
-					continue;
-				}
-			}
-
-			return search_results;
-		} catch (error) {
-			throw new Error(
-				`Similarity search failed: ${
-					error instanceof Error ? error.message : String(error)
-				}`,
-			);
-		}
-	}
-
 	async get_entity(name: string): Promise<Entity> {
 		const entity_result = this.db
 			.prepare(
@@ -321,43 +151,54 @@ export class DatabaseManager {
 			)
 			.all(name) as Array<{ content: string }>;
 
-		// Try to get embedding from vec table
-		let embedding: number[] | undefined;
-		const vec_result = this.db
-			.prepare(
-				'SELECT v.embedding FROM entities_vec v INNER JOIN entities e ON v.rowid = e.rowid WHERE e.name = ?',
-			)
-			.get(name) as { embedding: Buffer } | undefined;
-
-		if (vec_result) {
-			embedding = this.buffer_to_vector(vec_result.embedding);
-		}
-
 		return {
 			name: entity_result.name,
 			entityType: entity_result.entity_type,
 			observations: observations_result.map((row) => row.content),
-			embedding,
 		};
 	}
 
-	async search_entities(query: string): Promise<Entity[]> {
+	async search_entities(
+		query: string,
+		limit: number = 10,
+	): Promise<Entity[]> {
+		// Validate and clamp limit
+		const effective_limit = Math.min(Math.max(1, limit), 50);
+
 		// Normalize query for flexible matching: replace spaces/underscores with wildcards
 		const normalized_query = query.replace(/[\s_-]+/g, '%');
 		const search_pattern = `%${normalized_query}%`;
 
+		// Use relevance scoring: name match (3) > type match (2) > observation match (1)
 		const results = this.db
 			.prepare(
 				`
-        SELECT DISTINCT e.name, e.entity_type
+        SELECT DISTINCT
+          e.name,
+          e.entity_type,
+          e.created_at,
+          CASE
+            WHEN e.name LIKE ? COLLATE NOCASE THEN 3
+            WHEN e.entity_type LIKE ? COLLATE NOCASE THEN 2
+            ELSE 1
+          END as relevance_score
         FROM entities e
         LEFT JOIN observations o ON e.name = o.entity_name
         WHERE e.name LIKE ? COLLATE NOCASE
            OR e.entity_type LIKE ? COLLATE NOCASE
            OR o.content LIKE ? COLLATE NOCASE
+        ORDER BY relevance_score DESC, e.created_at DESC
+        LIMIT ?
       `,
 			)
-			.all(search_pattern, search_pattern, search_pattern) as Array<{
+			.all(
+				search_pattern,
+				search_pattern,
+				search_pattern,
+				search_pattern,
+				search_pattern,
+				effective_limit,
+			) as Array<{
 			name: string;
 			entity_type: string;
 		}>;
@@ -371,23 +212,10 @@ export class DatabaseManager {
 				)
 				.all(name) as Array<{ content: string }>;
 
-			// Try to get embedding
-			let embedding: number[] | undefined;
-			const vec_result = this.db
-				.prepare(
-					'SELECT v.embedding FROM entities_vec v INNER JOIN entities e ON v.rowid = e.rowid WHERE e.name = ?',
-				)
-				.get(name) as { embedding: Buffer } | undefined;
-
-			if (vec_result) {
-				embedding = this.buffer_to_vector(vec_result.embedding);
-			}
-
 			entities.push({
 				name,
 				entityType: row.entity_type,
 				observations: observations.map((obs) => obs.content),
-				embedding,
 			});
 		}
 
@@ -410,23 +238,10 @@ export class DatabaseManager {
 				)
 				.all(name) as Array<{ content: string }>;
 
-			// Try to get embedding
-			let embedding: number[] | undefined;
-			const vec_result = this.db
-				.prepare(
-					'SELECT v.embedding FROM entities_vec v INNER JOIN entities e ON v.rowid = e.rowid WHERE e.name = ?',
-				)
-				.get(name) as { embedding: Buffer } | undefined;
-
-			if (vec_result) {
-				embedding = this.buffer_to_vector(vec_result.embedding);
-			}
-
 			entities.push({
 				name,
 				entityType: row.entity_type,
 				observations: observations.map((obs) => obs.content),
-				embedding,
 			});
 		}
 
@@ -485,13 +300,6 @@ export class DatabaseManager {
 						'DELETE FROM relations WHERE source = ? OR target = ?',
 					)
 					.run(name, name);
-
-				// Delete from vector table
-				this.db
-					.prepare(
-						'DELETE FROM entities_vec WHERE rowid = (SELECT rowid FROM entities WHERE name = ?)',
-					)
-					.run(name);
 
 				// Delete the entity
 				this.db
@@ -565,6 +373,41 @@ export class DatabaseManager {
 		}));
 	}
 
+	async get_entity_with_relations(
+		name: string,
+	): Promise<{ entity: Entity; relations: Relation[]; relatedEntities: Entity[] }> {
+		// Get the main entity
+		const entity = await this.get_entity(name);
+
+		// Get all relations where this entity is source or target
+		const relations = await this.get_relations_for_entities([entity]);
+
+		// Get all related entity names
+		const related_names = new Set<string>();
+		for (const rel of relations) {
+			if (rel.from !== name) related_names.add(rel.from);
+			if (rel.to !== name) related_names.add(rel.to);
+		}
+
+		// Fetch all related entities
+		const relatedEntities: Entity[] = [];
+		for (const related_name of related_names) {
+			try {
+				const related_entity = await this.get_entity(related_name);
+				relatedEntities.push(related_entity);
+			} catch (error) {
+				// Skip entities that no longer exist
+				console.warn(
+					`Related entity "${related_name}" not found: ${
+						error instanceof Error ? error.message : String(error)
+					}`,
+				);
+			}
+		}
+
+		return { entity, relations, relatedEntities };
+	}
+
 	// Graph operations
 	async read_graph(): Promise<{
 		entities: Entity[];
@@ -577,30 +420,20 @@ export class DatabaseManager {
 	}
 
 	async search_nodes(
-		query: string | number[],
+		query: string,
+		limit: number = 10,
 	): Promise<{ entities: Entity[]; relations: Relation[] }> {
 		try {
-			let entities: Entity[];
-
-			if (Array.isArray(query)) {
-				// Validate vector query
-				if (!query.every((n) => typeof n === 'number')) {
-					throw new Error('Vector query must contain only numbers');
-				}
-				// Vector similarity search
-				const results = await this.search_similar(query);
-				entities = results.map((r) => r.entity);
-			} else {
-				// Validate text query
-				if (typeof query !== 'string') {
-					throw new Error('Text query must be a string');
-				}
-				if (query.trim() === '') {
-					throw new Error('Text query cannot be empty');
-				}
-				// Text-based search
-				entities = await this.search_entities(query);
+			// Validate text query
+			if (typeof query !== 'string') {
+				throw new Error('Text query must be a string');
 			}
+			if (query.trim() === '') {
+				throw new Error('Text query cannot be empty');
+			}
+
+			// Text-based search
+			const entities = await this.search_entities(query, limit);
 
 			// If no entities found, return empty result
 			if (entities.length === 0) {
@@ -656,12 +489,6 @@ export class DatabaseManager {
 					FOREIGN KEY (target) REFERENCES entities(name),
 					UNIQUE(source, target, relation_type)
 				);
-			`);
-
-			// Create virtual table for vector embeddings
-			this.db.exec(`
-				CREATE VIRTUAL TABLE IF NOT EXISTS entities_vec
-				USING vec0(embedding float[${VECTOR_DIMENSIONS}]);
 			`);
 
 			// Create indexes

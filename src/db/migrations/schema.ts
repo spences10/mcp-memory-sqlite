@@ -1,8 +1,5 @@
-// Vector dimension constant (1536 for OpenAI ada-002 compatibility)
-const VECTOR_DIMENSIONS = 1536;
-
 export const schema = [
-	// Create entities table (without embedding - that's in the virtual table)
+	// Create entities table
 	`CREATE TABLE IF NOT EXISTS entities (
     name TEXT PRIMARY KEY,
     entity_type TEXT NOT NULL,
@@ -29,9 +26,6 @@ export const schema = [
     FOREIGN KEY (target) REFERENCES entities(name),
     UNIQUE(source, target, relation_type)
   )`,
-
-	// Create virtual table for vector embeddings using sqlite-vec
-	`CREATE VIRTUAL TABLE IF NOT EXISTS entities_vec USING vec0(embedding float[${VECTOR_DIMENSIONS}])`,
 
 	// Create indexes
 	`CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name)`,
