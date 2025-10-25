@@ -26,13 +26,13 @@ const CreateEntitiesSchema = v.object({
 			name: v.string(),
 			entityType: v.string(),
 			observations: v.array(v.string()),
-			embedding: v.optional(v.array(v.number())),
 		}),
 	),
 });
 
 const SearchNodesSchema = v.object({
-	query: v.union([v.string(), v.array(v.number())]),
+	query: v.string(),
+	limit: v.optional(v.number()),
 });
 
 const CreateRelationsSchema = v.object({
@@ -55,13 +55,16 @@ const DeleteRelationSchema = v.object({
 	type: v.string(),
 });
 
+const GetEntityWithRelationsSchema = v.object({
+	name: v.string(),
+});
+
 function setupTools(server: McpServer<any>, db: DatabaseManager) {
 	// Tool: Create Entities
 	server.tool<typeof CreateEntitiesSchema>(
 		{
 			name: 'create_entities',
-			description:
-				'Create or update entities with observations and embeddings',
+			description: 'Create or update entities with observations',
 			schema: CreateEntitiesSchema,
 		},
 		async ({ entities }) => {
@@ -104,12 +107,12 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 		{
 			name: 'search_nodes',
 			description:
-				'Search entities and relations by text or vector similarity',
+				'Search entities and relations by text query. Returns up to limit results (default 10, max 50) ordered by relevance.',
 			schema: SearchNodesSchema,
 		},
-		async ({ query }) => {
+		async ({ query, limit }) => {
 			try {
-				const result = await db.search_nodes(query);
+				const result = await db.search_nodes(query, limit);
 				return {
 					content: [
 						{
@@ -314,6 +317,49 @@ function setupTools(server: McpServer<any>, db: DatabaseManager) {
 			}
 		},
 	);
+
+	// Tool: Get Entity With Relations
+	server.tool<typeof GetEntityWithRelationsSchema>(
+		{
+			name: 'get_entity_with_relations',
+			description:
+				'Get an entity along with all its relations and related entities. Useful for exploring the knowledge graph around a specific entity.',
+			schema: GetEntityWithRelationsSchema,
+		},
+		async ({ name }) => {
+			try {
+				const result = await db.get_entity_with_relations(name);
+				return {
+					content: [
+						{
+							type: 'text' as const,
+							text: JSON.stringify(result, null, 2),
+						},
+					],
+				};
+			} catch (error) {
+				return {
+					content: [
+						{
+							type: 'text' as const,
+							text: JSON.stringify(
+								{
+									error: 'internal_error',
+									message:
+										error instanceof Error
+											? error.message
+											: 'Unknown error',
+								},
+								null,
+								2,
+							),
+						},
+					],
+					isError: true,
+				};
+			}
+		},
+	);
 }
 
 // Start the server
@@ -329,7 +375,7 @@ async function main() {
 			name,
 			version,
 			description:
-				'SQLite-based persistent memory tool for MCP with vector search',
+				'SQLite-based persistent memory tool for MCP with text search',
 		},
 		{
 			adapter,
