@@ -46,9 +46,9 @@
 	"dependencies": {
 		"@tmcp/adapter-valibot": "^0.1.4",
 		"@tmcp/transport-stdio": "^0.4.0",
-		"@types/node": "^24.9.1",
+		"@types/node": "^24.9.2",
 		"better-sqlite3": "^12.4.1",
-		"tmcp": "^1.16.0",
+		"tmcp": "^1.16.1",
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
